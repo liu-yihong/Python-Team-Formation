@@ -248,9 +248,9 @@ def AugmentGraph(G: nx.Graph, FocalNodeID: int):
     AllOtherNodes = set(G.nodes)
     AllOtherNodes.remove(FocalNodeID)
 
-    # TODO: consider weights
     AllPossiblePathFromFocalNode = nx.shortest_path_length(
-        G=G, source=FocalNodeID)
+        G=G, source=FocalNodeID, weight='weight'
+    )
     AllPossiblePathFromFocalNode.pop(FocalNodeID)
 
     AugmentG = nx.Graph()
@@ -262,7 +262,7 @@ def AugmentGraph(G: nx.Graph, FocalNodeID: int):
         AllOtherNodes.remove(t)
     for t in AllOtherNodes:
         AugmentList.append(
-            (FocalNodeID, t, BIG_M)
+            (FocalNodeID, t, BIG_M * 100)
         )
     AugmentG.add_weighted_edges_from(AugmentList, weight='weight')
 
@@ -276,21 +276,32 @@ def AugmentGraph(G: nx.Graph, FocalNodeID: int):
 def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
     FeasibleTeam = None
     for h in range(MAXIMUM_HOP):
-        EgoG = nx.ego_graph(G, AllNodeList[FocalNodeID].ID, radius=h + 1)
-        # TODO: consider weighted edges
-        PotentialNodeIDList = list(
-            nx.single_source_shortest_path(EgoG, FocalNodeID, h + 1).keys()
+        # edge weights included in EgoG
+        EgoG = nx.ego_graph(G, FocalNodeID, radius=h + 1)
+        AugmentG = AugmentGraph(
+            EgoG,
+            FocalNodeID
         )
-        try:
-            FeasibleTeam = MaxItemNFeasibleTeam(
-                AllNodeList=AllNodeList,
-                TeamNodeIDList=PotentialNodeIDList,
-                FocalTask=FocalTask,
-                FocalNodeID=FocalNodeID
-            )
+        # get all possible radius
+        AllRadiusList = sorted(
+            [(tup[2]['weight'], tup[1])
+             for _, tup in enumerate(AugmentG.edges(data=True))]
+        )
+        # TODO: consider weighted edges
+        for idx, tup in enumerate(AllRadiusList):
+            PotentialNodeIDList = [FocalNodeID] + [t[-1] for t in AllRadiusList[:idx+1]]
+            try:
+                FeasibleTeam = MaxItemNFeasibleTeam(
+                    AllNodeList=AllNodeList,
+                    TeamNodeIDList=PotentialNodeIDList,
+                    FocalTask=FocalTask,
+                    FocalNodeID=FocalNodeID
+                )
+                break
+            except AssertionError:
+                continue
+        if FeasibleTeam is not None:
             break
-        except AssertionError:
-            continue
     assert FeasibleTeam is not None, "Cannot find feasible team!"
     return FeasibleTeam
 
@@ -298,7 +309,8 @@ def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask
 def MinAggrSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
     for h in range(MAXIMUM_HOP):
         # get h-hop neighbors
-        EgoG = nx.ego_graph(G, AllNodeList[FocalNodeID].ID, radius=h + 1)
+        # edge weights included in EgoG
+        EgoG = nx.ego_graph(G, FocalNodeID, radius=h + 1)
         # get augment graph
         # TODO: consider weighted edges
         AugmentG = AugmentGraph(
