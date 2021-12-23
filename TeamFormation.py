@@ -22,7 +22,8 @@ SKILL_PROB = 0.5
 MAX_HOP = 5
 MAX_CAP = NUM_SKILL
 LEADERROLE_SKILL_ID = 0
-BIG_M = 5
+MAX_EDGE_WEIGHT = 5
+BIG_M = 999
 
 '''
 Utility Class
@@ -150,7 +151,8 @@ def generateBinomialGraph(n, p, node_type: CapNode):
     G = nx.fast_gnp_random_graph(n, p, 0, False)
     # generate weights
     np.random.seed(0)
-    EdgesWeight = np.random.uniform(low=0.0, high=BIG_M, size=len(G.edges))
+    EdgesWeight = np.random.uniform(
+        low=0.0, high=MAX_EDGE_WEIGHT, size=len(G.edges))
     # assign weights
     for idx, tup in enumerate(G.edges):
         G[tup[0]][tup[1]]['weight'] = EdgesWeight[idx]
@@ -276,16 +278,12 @@ def AugmentGraph(G: nx.Graph, FocalNodeID: int):
         AllOtherNodes.remove(t)
     for t in AllOtherNodes:
         AugmentList.append(
-            (FocalNodeID, t, BIG_M * 100)
+            (FocalNodeID, t, BIG_M)
         )
     AugmentG.add_weighted_edges_from(AugmentList, weight='weight')
 
     return AugmentG
 
-
-# TODO: add collab cost calculation: diameter, steiner cost, bottleneck cost
-
-# TODO Add MinMaxSol algorithms
 
 def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
     FeasibleTeam = None
@@ -428,7 +426,6 @@ def MinAggrSolNew(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalT
         # edge weights included in EgoG
         EgoG = nx.ego_graph(G, FocalNodeID, radius=h + 1)
         # get augment graph
-        # TODO: consider weighted edges
         AugmentG = AugmentGraph(
             EgoG,
             FocalNodeID
@@ -489,4 +486,64 @@ def MinAggrSolNew(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalT
 
 
 def MinMaxSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
-    pass
+    FeasibleTeam = None
+    # get h-hop neighbors
+    # edge weights included in EgoG
+    EgoG = nx.ego_graph(G, FocalNodeID, radius=MAXIMUM_HOP)
+    EdgeWeightList = sorted(
+        [(tup[2]['weight'], [tup[0], tup[1]])
+         for _, tup in enumerate(EgoG.edges(data=True))]
+    )
+    for idx, tup in enumerate(EdgeWeightList):
+        FilterEdge = [t[1] for t in EdgeWeightList[:idx+1]]
+        # TODO: we should get the component from the FilterNodeList
+        FilterNodeList = list(
+            set([FocalNodeID] + [item for sublist in FilterEdge for item in sublist])
+        )
+        try:
+            FeasibleTeam = MaxItemNFeasibleTeam(
+                AllNodeList=AllNodeList,
+                TeamNodeIDList=FilterNodeList,
+                FocalTask=FocalTask,
+                FocalNodeID=FocalNodeID
+            )
+        except AssertionError:
+            continue
+
+    assert FeasibleTeam is not None, "Cannot find feasible team!"
+    return FeasibleTeam
+
+
+def MinMaxSolNew(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
+    FeasibleTeam = None
+    for h in range(MAXIMUM_HOP):
+        # get h-hop neighbors
+        # edge weights included in EgoG
+        EgoG = nx.ego_graph(G, FocalNodeID, radius=h + 1)
+        EdgeWeightList = sorted(
+            [(tup[2]['weight'], [tup[0], tup[1]])
+             for _, tup in enumerate(EgoG.edges(data=True))]
+        )
+        for idx, tup in enumerate(EdgeWeightList):
+            FilterEdge = [t[1] for t in EdgeWeightList[:idx+1]]
+            # TODO: we should get the component from the FilterNodeList
+            FilterNodeList = list(
+                set([FocalNodeID] +
+                    [item for sublist in FilterEdge for item in sublist])
+            )
+            try:
+                FeasibleTeam = MaxItemNFeasibleTeam(
+                    AllNodeList=AllNodeList,
+                    TeamNodeIDList=FilterNodeList,
+                    FocalTask=FocalTask,
+                    FocalNodeID=FocalNodeID
+                )
+            except AssertionError:
+                continue
+        if FeasibleTeam is not None:
+            break
+
+    assert FeasibleTeam is not None, "Cannot find feasible team!"
+    return FeasibleTeam
+
+# TODO: add collab cost calculation: diameter, steiner cost, bottleneck cost
