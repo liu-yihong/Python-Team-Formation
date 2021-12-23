@@ -287,7 +287,7 @@ def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask
             [(tup[2]['weight'], tup[1])
              for _, tup in enumerate(AugmentG.edges(data=True))]
         )
-        # TODO: consider weighted edges
+        # from smallest radius to the largest
         for idx, tup in enumerate(AllRadiusList):
             PotentialNodeIDList = [FocalNodeID] + [t[-1] for t in AllRadiusList[:idx+1]]
             try:
@@ -307,6 +307,7 @@ def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask
 
 
 def MinAggrSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
+    FeasibleTeam = None
     for h in range(MAXIMUM_HOP):
         # get h-hop neighbors
         # edge weights included in EgoG
@@ -319,7 +320,6 @@ def MinAggrSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask
         )
         # initialize variables
         CoverList = [FocalNodeID]
-        FeasibleTeam = None
         CurrentFlowValue, _ = MaxItem(
             AllNodeList=AllNodeList,
             TeamNodeIDList=CoverList,
