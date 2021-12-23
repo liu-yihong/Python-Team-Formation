@@ -1,13 +1,14 @@
 from typing import List, Tuple
 import numpy as np
 import networkx as nx
+from itertools import combinations
 
 NUM_SKILL = 4
 SKILL_PROB = 0.5
 MAX_HOP = 5
 MAX_CAP = NUM_SKILL
 LEADERROLE_SKILL_ID = 0
-BIG_M = 999
+BIG_M = 5
 
 '''
 Utility Class
@@ -131,10 +132,17 @@ Utility Function
 
 
 def generateBinomialGraph(n, p, node_type: CapNode):
-    # assuming unit weight
-    # TODO: add edge weight
+    # generate an undirected graph
     G = nx.fast_gnp_random_graph(n, p, 0, False)
-    NodesList = [node_type().random(ID=i) for i in range(n)]
+    # generate weights
+    np.random.seed(0)
+    EdgesWeight = np.random.uniform(low=0.0, high=BIG_M, size=len(G.edges))
+    # assign weights
+    for idx, tup in enumerate(G.edges):
+        G[tup[0]][tup[1]]['weight'] = EdgesWeight[idx]
+    # generate Node object instances
+    NodesList = [node_type().random(ID=i) for i in G.nodes]
+
     return G, NodesList
 
 
@@ -348,9 +356,10 @@ def MinAggrSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask
             break
         else:
             continue
-        
+
     assert FeasibleTeam is not None, "Cannot find feasible team!"
     return FeasibleTeam
+
 
 def MinMaxSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
     pass
