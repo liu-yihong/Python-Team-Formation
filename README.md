@@ -1,2 +1,3 @@
 # Python Team Formation
- Unofficial Implementations of Several Team Formation Papers
+
+ This repo includes unofficial implementations of several papers on team formation problem.
