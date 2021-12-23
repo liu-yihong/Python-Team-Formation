@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+# filename          : TeamFormation.py
+# description  : python implementation of seveal papers in Team Formation Problem
+# author            : liu-yihong
+# date              : 20211223
+# license           : GNU GPLV3
+# py version        : 3.9.7
+# ==============================================================================
+
+"""
+
+Check the github repo for more information:
+https://github.com/liu-yihong/Python-Team-Formation
+"""
 from typing import List, Tuple
 import numpy as np
 import networkx as nx
@@ -271,7 +285,7 @@ def AugmentGraph(G: nx.Graph, FocalNodeID: int):
 
 # TODO: add collab cost calculation: diameter, steiner cost, bottleneck cost
 
-# TODO Add MinAggrSol, MinMaxSol algorithms
+# TODO Add MinMaxSol algorithms
 
 def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
     FeasibleTeam = None
@@ -289,7 +303,8 @@ def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask
         )
         # from smallest radius to the largest
         for idx, tup in enumerate(AllRadiusList):
-            PotentialNodeIDList = [FocalNodeID] + [t[-1] for t in AllRadiusList[:idx+1]]
+            PotentialNodeIDList = [FocalNodeID] + [t[-1]
+                                                   for t in AllRadiusList[:idx+1]]
             try:
                 FeasibleTeam = MaxItemNFeasibleTeam(
                     AllNodeList=AllNodeList,
