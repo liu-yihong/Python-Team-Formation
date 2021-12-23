@@ -289,100 +289,93 @@ def AugmentGraph(G: nx.Graph, FocalNodeID: int):
 
 def MinDiamSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
     FeasibleTeam = None
-    for h in range(MAXIMUM_HOP):
-        # edge weights included in EgoG
-        EgoG = nx.ego_graph(G, FocalNodeID, radius=h + 1)
-        AugmentG = AugmentGraph(
-            EgoG,
-            FocalNodeID
-        )
-        # get all possible radius
-        AllRadiusList = sorted(
-            [(tup[2]['weight'], tup[1])
-             for _, tup in enumerate(AugmentG.edges(data=True))]
-        )
-        # from smallest radius to the largest
-        for idx, tup in enumerate(AllRadiusList):
-            PotentialNodeIDList = [FocalNodeID] + [t[-1]
-                                                   for t in AllRadiusList[:idx+1]]
-            try:
-                FeasibleTeam = MaxItemNFeasibleTeam(
-                    AllNodeList=AllNodeList,
-                    TeamNodeIDList=PotentialNodeIDList,
-                    FocalTask=FocalTask,
-                    FocalNodeID=FocalNodeID
-                )
-                break
-            except AssertionError:
-                continue
-        if FeasibleTeam is not None:
+    # edge weights included in EgoG
+    EgoG = nx.ego_graph(G, FocalNodeID, radius=MAXIMUM_HOP)
+    AugmentG = AugmentGraph(
+        EgoG,
+        FocalNodeID
+    )
+    # get all possible radius
+    AllRadiusList = sorted(
+        [(tup[2]['weight'], tup[1])
+            for _, tup in enumerate(AugmentG.edges(data=True))]
+    )
+    # from smallest radius to the largest
+    for idx, tup in enumerate(AllRadiusList):
+        PotentialNodeIDList = [FocalNodeID] + [t[-1]
+                                               for t in AllRadiusList[:idx+1]]
+        try:
+            FeasibleTeam = MaxItemNFeasibleTeam(
+                AllNodeList=AllNodeList,
+                TeamNodeIDList=PotentialNodeIDList,
+                FocalTask=FocalTask,
+                FocalNodeID=FocalNodeID
+            )
             break
+        except AssertionError:
+            continue
+
     assert FeasibleTeam is not None, "Cannot find feasible team!"
     return FeasibleTeam
 
 
 def MinAggrSol(G: nx.Graph, AllNodeList: List[Node], FocalNodeID: int, FocalTask: Task, MAXIMUM_HOP: int):
     FeasibleTeam = None
-    for h in range(MAXIMUM_HOP):
-        # get h-hop neighbors
-        # edge weights included in EgoG
-        EgoG = nx.ego_graph(G, FocalNodeID, radius=h + 1)
-        # get augment graph
-        # TODO: consider weighted edges
-        AugmentG = AugmentGraph(
-            EgoG,
-            FocalNodeID
-        )
-        # initialize variables
-        CoverList = [FocalNodeID]
-        CurrentFlowValue, _ = MaxItem(
-            AllNodeList=AllNodeList,
-            TeamNodeIDList=CoverList,
-            FocalTask=FocalTask,
-            FocalNodeID=FocalNodeID
-        )
-        while CurrentFlowValue < FocalTask.SkillList.sum():
-            NextNodeCandidates = set(AugmentG.nodes)
-            NextNodeCandidates.difference_update(CoverList)
-            FinalOBJ = 0.0
-            x_bar = None
-            for x in NextNodeCandidates:
-                NextFlowValue, _ = MaxItem(
-                    AllNodeList=AllNodeList,
-                    TeamNodeIDList=CoverList + [x],
-                    FocalTask=FocalTask,
-                    FocalNodeID=FocalNodeID
-                )
-                CurrentOBJ = (NextFlowValue - CurrentFlowValue) / \
-                    AugmentG[FocalNodeID][x]['weight']
-                if CurrentOBJ > FinalOBJ:
-                    FinalOBJ, x_bar = CurrentOBJ, x
-                else:
-                    continue
-            if x_bar is not None:
-                CoverList.append(x_bar)
-                CurrentFlowValue, _ = MaxItem(
-                    AllNodeList=AllNodeList,
-                    TeamNodeIDList=CoverList,
-                    FocalTask=FocalTask,
-                    FocalNodeID=FocalNodeID
-                )
+    # get h-hop neighbors
+    # edge weights included in EgoG
+    EgoG = nx.ego_graph(G, FocalNodeID, radius=MAXIMUM_HOP)
+    # get augment graph
+    AugmentG = AugmentGraph(
+        EgoG,
+        FocalNodeID
+    )
+    # initialize variables
+    CoverList = [FocalNodeID]
+    CurrentFlowValue, _ = MaxItem(
+        AllNodeList=AllNodeList,
+        TeamNodeIDList=CoverList,
+        FocalTask=FocalTask,
+        FocalNodeID=FocalNodeID
+    )
+    while CurrentFlowValue < FocalTask.SkillList.sum():
+        NextNodeCandidates = set(AugmentG.nodes)
+        NextNodeCandidates.difference_update(CoverList)
+        FinalOBJ = 0.0
+        x_bar = None
+        for x in NextNodeCandidates:
+            NextFlowValue, _ = MaxItem(
+                AllNodeList=AllNodeList,
+                TeamNodeIDList=CoverList + [x],
+                FocalTask=FocalTask,
+                FocalNodeID=FocalNodeID
+            )
+            CurrentOBJ = (NextFlowValue - CurrentFlowValue) / \
+                AugmentG[FocalNodeID][x]['weight']
+            if CurrentOBJ > FinalOBJ:
+                FinalOBJ, x_bar = CurrentOBJ, x
             else:
-                # no node can increase the flow value of current cover
-                break
-        if CurrentFlowValue >= FocalTask.SkillList.sum():
-            # TODO: here we do not consider minimum cost steiner tree
-            # SteinerTree = nx.approximation.steiner_tree(G, CoverList)
-            # CoverList = list(SteinerTree.nodes)
-            FeasibleTeam = MaxItemNFeasibleTeam(
+                continue
+        if x_bar is not None:
+            CoverList.append(x_bar)
+            CurrentFlowValue, _ = MaxItem(
                 AllNodeList=AllNodeList,
                 TeamNodeIDList=CoverList,
                 FocalTask=FocalTask,
                 FocalNodeID=FocalNodeID
             )
-            break
         else:
-            continue
+            # no node can increase the flow value of current cover
+            break
+    if CurrentFlowValue >= FocalTask.SkillList.sum():
+        # TODO: here we do not consider minimum cost steiner tree
+        # SteinerTree = nx.approximation.steiner_tree(G, CoverList)
+        # CoverList = list(SteinerTree.nodes)
+        FeasibleTeam = MaxItemNFeasibleTeam(
+            AllNodeList=AllNodeList,
+            TeamNodeIDList=CoverList,
+            FocalTask=FocalTask,
+            FocalNodeID=FocalNodeID
+        )
 
     assert FeasibleTeam is not None, "Cannot find feasible team!"
     return FeasibleTeam
