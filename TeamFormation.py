@@ -261,6 +261,9 @@ def MaxItemNFeasibleTeam(AllNodeList: List[Node], TeamNodeIDList: List[int], Foc
 
 
 def AugmentGraph(G: nx.Graph, FocalNodeID: int):
+    PathLength = nx.shortest_path_length(G, weight='weight', method='dijkstra')
+    BIG_EDGE_WEIGHT = sum([sum(x[-1].values()) for x in PathLength])
+    
     AllOtherNodes = set(G.nodes)
     AllOtherNodes.remove(FocalNodeID)
 
@@ -278,7 +281,7 @@ def AugmentGraph(G: nx.Graph, FocalNodeID: int):
         AllOtherNodes.remove(t)
     for t in AllOtherNodes:
         AugmentList.append(
-            (FocalNodeID, t, BIG_M)
+            (FocalNodeID, t, BIG_EDGE_WEIGHT)
         )
     AugmentG.add_weighted_edges_from(AugmentList, weight='weight')
 
