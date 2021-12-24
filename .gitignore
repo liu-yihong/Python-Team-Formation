@@ -1,5 +1,6 @@
 # ignore some files
 Formationtest.ipynb
+anagnostopoulos2012online.ipynb
 
 # all files in following directories
 __pycache__/
